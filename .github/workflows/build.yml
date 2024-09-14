@@ -22,10 +22,10 @@ jobs:
             output_name: gask
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: '3.x'
 
@@ -43,7 +43,7 @@ jobs:
         output-file: ${{ matrix.output_name }}
 
     - name: Upload artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: gask-${{ runner.os }}
         path: build/${{ matrix.output_name }}
