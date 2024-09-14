@@ -27,7 +27,7 @@ Gask is a command-line tool powered by Google AI Studio that generates command s
 
 ### 2-1. Clone the repository:
    ```
-   git clone https://github.com/yourusername/gask.git
+   git clone https://github.com/M0ch0/gask.git
    cd gask
    ```
 
