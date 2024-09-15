@@ -94,7 +94,7 @@ def generate_commands(query, model_name, api_key):
     }
 
     try:
-        response = requests.post(f"{url}?key={api_key}", headers=headers, json=data, timeout=600)
+        response = requests.post(f"{url}?key={api_key}", headers=headers, json=data, timeout=600, verify=True)
         response.raise_for_status()
         result = response.json()
         return result['candidates'][0]['content']['parts'][0]['text']
