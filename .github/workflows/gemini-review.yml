@@ -27,7 +27,7 @@ jobs:
             cat "diff.txt";
             echo 'EOF';
           } >> $GITHUB_OUTPUT
-      - uses: M0ch0/gemini-code-review-action-full-context@0.1.0
+      - uses: M0ch0/gemini-code-review-action-full-context@0.1.1
         name: "Code Review by Gemini AI with Full Context"
         id: review
         with:
