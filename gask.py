@@ -51,6 +51,7 @@ def load_config(config_path=None):
         if path and Path(path).exists():
             config.read(path)
             return config['DEFAULT']
+        
     print("Configuration file not found")
     sys.exit(1)
 
@@ -65,7 +66,7 @@ def get_parent_cli():
         return subprocess.run(["ps", "-p", str(ppid), "-o", "comm="], 
                               capture_output=True, text=True).stdout.strip()
 
-def generate_commands(query, model_name, api_key):
+def generate_commands(query, model_name, api_key, custom_prompt=None):
     """
     Generate commands based on the user's query using Google Generative AI REST API.
     """
@@ -81,7 +82,7 @@ def generate_commands(query, model_name, api_key):
 
     environment = f"OS: {os_name}, Terminal: {terminal}, Parent CLI: {parent_cli}"
     
-    prompt = DEFAULT_PROMPT.format(environment=environment, query=query)
+    prompt = custom_prompt.format(environment=environment, query=query) if custom_prompt else DEFAULT_PROMPT.format(environment=environment, query=query)
 
     data = {
         "contents": [{
@@ -153,13 +154,14 @@ def main():
     config = load_config()
     api_key = config.get("API_KEY")
     model_name = config.get("MODEL_NAME", "gemini-1.5-flash")
+    custom_prompt = config.get("INSTRUCT")
 
     if not api_key or api_key == "your_google_api_key_here":
         print("Invalid API_KEY. Please set a valid API key in your configuration.")
         return
 
     if args.query:
-        response_text = generate_commands(args.query, model_name, api_key)
+        response_text = generate_commands(args.query, model_name, api_key, custom_prompt)
         commands_json = validate_json(response_text)
         display_command(commands_json)
         if args.desc:
