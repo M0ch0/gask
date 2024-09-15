@@ -40,8 +40,15 @@ jobs:
         standalone: true
         output-file: ${{ matrix.output_name }}
 
+    - name: Copy .gask.conf to build directory
+      run: |
+        mkdir -p build
+          cp .gask.conf build/
+    
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: gask-${{ runner.os }}
-        path: build/${{ matrix.output_name }}
+        path: |
+          build/${{ matrix.output_name }}
+          build/.gask.conf
