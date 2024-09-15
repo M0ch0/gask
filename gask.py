@@ -94,12 +94,14 @@ def generate_commands(query, model_name, api_key):
     }
 
     try:
-        response = requests.post(f"{url}?key={api_key}", headers=headers, json=data, timeout=600)
+        response = requests.post(f"{url}?key={api_key}", headers=headers, json=data, timeout=600, verify=True)
         response.raise_for_status()
         result = response.json()
         return result['candidates'][0]['content']['parts'][0]['text']
     except requests.RequestException as e:
-        print(f"Error generating commands: {e}")
+        print("An error occurred while communicating with the API. Please try again later.")
+        if os.environ.get('GASK_DEBUG'):
+            print(f"Debug info: {str(e)}")
         sys.exit(1)
 
 
@@ -152,8 +154,8 @@ def main():
     api_key = config.get("API_KEY")
     model_name = config.get("MODEL_NAME", "gemini-1.5-flash")
 
-    if not api_key:
-        print("API_KEY not found in configuration.")
+    if not api_key or api_key == "your_google_api_key_here":
+        print("Invalid API_KEY. Please set a valid API key in your configuration.")
         return
 
     if args.query:
