@@ -27,7 +27,7 @@ jobs:
             cat "diff.txt";
             echo 'EOF';
           } >> $GITHUB_OUTPUT
-      - uses: M0ch0/gemini-code-review-action-full-context@0.1.3
+      - uses: M0ch0/gemini-code-review-action-full-context@0.1.4
         name: "Code Review by Gemini AI with Full Context"
         id: review
         with:
@@ -39,7 +39,7 @@ jobs:
           model: "gemini-1.5-pro-exp-0827"
           pull_request_diff: |-
             ${{ steps.get_diff.outputs.pull_request_diff }}
-          pull_request_chunk_size: "800000"
+          pull_request_chunk_size: "1800000"
           extra_prompt: |-
             Code reviews need to be multifaceted, critical, thoughtful and excellent.
           log_level: "DEBUG"
