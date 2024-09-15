@@ -6,9 +6,7 @@ import json
 import os
 import sys
 from pathlib import Path
-
-import google.generativeai as genai
-from jsonschema import validate, ValidationError
+import requests
 
 # Define the JSON schema
 COMMAND_SCHEMA = {
@@ -52,51 +50,62 @@ def load_config(config_path=None):
     return config['DEFAULT']
 
 
-def configure_genai(api_key):
+def generate_commands(query, model_name, api_key):
     """
-    Configure the Google Generative AI client.
+    Generate commands based on the user's query using Google Generative AI REST API.
     """
-    genai.configure(api_key=api_key)
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
+    headers = {
+        "Content-Type": "application/json"
+    }
+    data = {
+        "contents": [{
+            "parts": [{"text": query}]
+        }],
+        "generationConfig": {
+            "response_mime_type": "application/json",
+            "responseSchema": COMMAND_SCHEMA
+        }
+    }
 
-
-def generate_commands(query, model_name):
-    """
-    Generate commands based on the user's query using Google Generative AI.
-    """
     try:
-        model = genai.GenerativeModel(
-            model_name,
-            generation_config={"response_mime_type": "application/json"}
-        )
-
-        result = model.generate_content(
-            query,
-            generation_config=genai.GenerationConfig(
-                response_mime_type="application/json",
-                response_schema=COMMAND_SCHEMA
-            ),
-            request_options={"timeout": 600},
-        )
-
-        return result.text
-    except Exception as e:
+        response = requests.post(f"{url}?key={api_key}", headers=headers, json=data, timeout=600)
+        response.raise_for_status()
+        result = response.json()
+        return result['candidates'][0]['content']['parts'][0]['text']
+    except requests.RequestException as e:
         print(f"Error generating commands: {e}")
         sys.exit(1)
 
 
+def validate_command_json(data):
+    """
+    Validate the JSON response against the expected structure.
+    """
+    if not isinstance(data, dict):
+        raise ValueError("Response is not a JSON object")
+    
+    if "command" not in data or not isinstance(data["command"], str):
+        raise ValueError("Missing or invalid 'command' field")
+    
+    if "description" not in data or not isinstance(data["description"], str):
+        raise ValueError("Missing or invalid 'description' field")
+    
+    return data
+
+
 def validate_json(response_text):
     """
-    Validate the JSON response against the COMMAND_SCHEMA.
+    Validate the JSON response against the expected structure.
     """
     try:
         response_json = json.loads(response_text)
-        validate(instance=response_json, schema=COMMAND_SCHEMA)
-        return response_json
+        return validate_command_json(response_json)
     except json.JSONDecodeError:
         print("Invalid JSON response from the AI model.")
         sys.exit(1)
-    except ValidationError as ve:
-        print(f"JSON Schema validation error: {ve.message}")
+    except ValueError as ve:
+        print(f"JSON validation error caused by AI model: {str(ve)}")
         sys.exit(1)
 
 
@@ -145,12 +154,9 @@ def main():
         print("API_KEY not found in configuration.")
         sys.exit(1)
 
-    # Configure Google Generative AI
-    configure_genai(api_key)
-
     if args.query:
         # Generate commands based on the query
-        response_text = generate_commands(args.query, model_name)
+        response_text = response_text = generate_commands(args.query, model_name, api_key)
         commands_json = validate_json(response_text)
 
         # Display the command
