@@ -4,6 +4,7 @@ import argparse
 import configparser
 import json
 import os
+import subprocess
 import sys
 from pathlib import Path
 import requests
@@ -25,30 +26,44 @@ COMMAND_SCHEMA = {
     ]
 }
 
+DEFAULT_PROMPT = """
+### Instruction
+You are a command line tool that generates command suggestions based on user queries and environment. current user's environment is {environment}.
+"command" must be a valid command that can be executed in the user's environment.
+"description" must be a short description of the command.
+
+### Input
+User query: {query}
+"""
+
 
 def load_config(config_path=None):
     """
     Load configuration from a file.
     """
     config = configparser.ConfigParser()
+    paths = [
+        config_path,
+        Path(__file__).parent / ".gask.conf",
+        Path.home() / ".gask.conf"
+    ]
+    for path in paths:
+        if path and Path(path).exists():
+            config.read(path)
+            return config['DEFAULT']
+    print("Configuration file not found")
+    sys.exit(1)
 
-    # Default config path
-    if not config_path:
-        # Check the script's directory
-        script_dir = Path(__file__).parent
-        config_path = script_dir / "gask.conf"
 
-        # If not found, check in the user's home directory
-        if not config_path.exists():
-            config_path = Path.home() / ".gask.conf"
-
-    if not Path(config_path).exists():
-        print(f"Configuration file not found at {config_path}")
-        sys.exit(1)
-
-    config.read(config_path)
-    return config['DEFAULT']
-
+def get_parent_cli():
+    ppid = os.getppid()
+    if os.name == 'nt':  # Windows
+        result = subprocess.run(["tasklist", "/FI", f"PID eq {ppid}", "/FO", "CSV", "/NH"], 
+                                capture_output=True, text=True)
+        return result.stdout.split(',')[0].strip('"') if result.stdout else "Unknown"
+    else:  # UNIX-like systems
+        return subprocess.run(["ps", "-p", str(ppid), "-o", "comm="], 
+                              capture_output=True, text=True).stdout.strip()
 
 def generate_commands(query, model_name, api_key):
     """
@@ -58,9 +73,19 @@ def generate_commands(query, model_name, api_key):
     headers = {
         "Content-Type": "application/json"
     }
+
+    # Get OS and terminal information
+    os_name = "Windows" if os.name == 'nt' else os.uname().sysname
+    terminal = os.environ.get('TERM', 'Unknown')
+    parent_cli = get_parent_cli()
+
+    environment = f"OS: {os_name}, Terminal: {terminal}, Parent CLI: {parent_cli}"
+    
+    prompt = DEFAULT_PROMPT.format(environment=environment, query=query)
+
     data = {
         "contents": [{
-            "parts": [{"text": query}]
+            "parts": [{"text": prompt}]
         }],
         "generationConfig": {
             "response_mime_type": "application/json",
@@ -78,34 +103,21 @@ def generate_commands(query, model_name, api_key):
         sys.exit(1)
 
 
-def validate_command_json(data):
-    """
-    Validate the JSON response against the expected structure.
-    """
-    if not isinstance(data, dict):
-        raise ValueError("Response is not a JSON object")
-    
-    if "command" not in data or not isinstance(data["command"], str):
-        raise ValueError("Missing or invalid 'command' field")
-    
-    if "description" not in data or not isinstance(data["description"], str):
-        raise ValueError("Missing or invalid 'description' field")
-    
-    return data
-
-
 def validate_json(response_text):
-    """
-    Validate the JSON response against the expected structure.
-    """
     try:
-        response_json = json.loads(response_text)
-        return validate_command_json(response_json)
+        data = json.loads(response_text)
+        if not isinstance(data, dict):
+            raise ValueError("Response is not a JSON object")
+        if "command" not in data or not isinstance(data["command"], str):
+            raise ValueError("Missing or invalid 'command' field")
+        if "description" not in data or not isinstance(data["description"], str):
+            raise ValueError("Missing or invalid 'description' field")
+        return data
     except json.JSONDecodeError:
         print("Invalid JSON response from the AI model.")
         sys.exit(1)
     except ValueError as ve:
-        print(f"JSON validation error caused by AI model: {str(ve)}")
+        print(f"JSON validation error: {str(ve)}")
         sys.exit(1)
 
 
@@ -124,50 +136,34 @@ def display_command(commands_json):
 
 
 def main():
-    # Argument parser setup
     parser = argparse.ArgumentParser(
         description="Gask: A command suggestion tool powered by Google AI Studio."
     )
-    parser.add_argument(
-        "query",
-        nargs="?",
-        help="The query to generate command suggestions for."
-    )
-    parser.add_argument(
-        "-d", "--desc", "--description",
-        action="store_true",
-        help="Display the description of the suggested command."
-    )
-
+    parser.add_argument("query", nargs="?", help="The query to generate command suggestions for.")
+    parser.add_argument("-d", "--desc", "--description", action="store_true", 
+                        help="Display the description of the suggested command.")
     args = parser.parse_args()
 
     if not args.query and not args.desc:
         parser.print_help()
-        sys.exit(0)
+        return
 
-    # Load configuration
     config = load_config()
     api_key = config.get("API_KEY")
     model_name = config.get("MODEL_NAME", "gemini-1.5-flash")
 
     if not api_key:
         print("API_KEY not found in configuration.")
-        sys.exit(1)
+        return
 
     if args.query:
-        # Generate commands based on the query
-        response_text = response_text = generate_commands(args.query, model_name, api_key)
+        response_text = generate_commands(args.query, model_name, api_key)
         commands_json = validate_json(response_text)
-
-        # Display the command
         display_command(commands_json)
-
-    if args.desc:
-        if args.query:
+        if args.desc:
             display_description(commands_json)
-        else:
-            print("Description requested without a query. Please provide a query.")
-            sys.exit(1)
+    elif args.desc:
+        print("Description requested without a query. Please provide a query.")
 
 
 if __name__ == "__main__":
