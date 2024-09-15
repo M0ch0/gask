@@ -19,9 +19,9 @@ Gask is a command-line tool powered by Google AI Studio that generates command s
 1-2. Place the binary in your PATH
 
 1-3. Set up the configuration:
-   - Copy the `gask.conf` file to your home directory:
+   - Copy the `.gask.conf` file to your home directory:
      ```
-     cp gask.conf ~/.gask.conf
+     cp .gask.conf ~/.gask.conf
      ```
    - Edit `~/.gask.conf` and replace `your_google_api_key_here` with your actual Google AI Studio API key.
 
@@ -33,13 +33,13 @@ Gask is a command-line tool powered by Google AI Studio that generates command s
 
 2-2. Install the required dependencies:
    ```
-   pip install google-generativeai jsonschema
+   pip install requests
    ```
 
 2-3. Set up the configuration:
-   - Copy the `gask.conf` file to your home directory:
+   - Copy the `.gask.conf` file to your home directory:
      ```
-     cp gask.conf ~/.gask.conf
+     cp .gask.conf ~/.gask.conf
      ```
    - Edit `~/.gask.conf` and replace `your_google_api_key_here` with your actual Google AI Studio API key.
 
@@ -48,3 +48,11 @@ Gask is a command-line tool powered by Google AI Studio that generates command s
 `python gask.py [-d] ["query"]`
 - `query`: The natural language query to generate command suggestions for.
 - `-d`, `--desc`, `--description`: Display the description of the suggested command.
+
+> [!IMPORTANT]
+> ## Security Notes
+> 
+> - Keep your API key confidential and never share it publicly.
+> - Regularly rotate your API key for enhanced security.
+> - Ensure your `.gask.conf` file has restricted permissions (600 on Unix-like systems).
+> - Be cautious when running suggested commands, especially if they involve system modifications. **LLM IS NOT RESPONSIBLE FOR YOUR SYSTEM!**
