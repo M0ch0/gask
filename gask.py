@@ -93,10 +93,10 @@ def generate_commands(query, model_name, api_key):
 
     # Get OS and terminal information
     os_name = "Windows" if os.name == 'nt' else os.uname().sysname
-    terminal = os.environ.get('TERM', 'Unknown')
+    terminal_info = get_terminal_info()
     parent_cli = get_parent_cli()
 
-    environment = f"OS: {os_name}, Terminal: {terminal}, Parent CLI: {parent_cli}"
+    environment = f"OS: {os_name}, {terminal_info}, Parent CLI: {parent_cli}"
     
     prompt = DEFAULT_PROMPT.format(environment=environment, query=query)
 
