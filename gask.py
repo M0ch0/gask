@@ -55,6 +55,15 @@ def load_config(config_path=None):
     sys.exit(1)
 
 
+def get_terminal_info():
+    if os.name == 'nt':
+        return os.environ.get('COMSPEC', 'Unknown')
+    else:
+        terminal = os.environ.get('TERM', 'Unknown')
+        shell = os.environ.get('SHELL', 'Unknown')
+        return f"Terminal: {terminal}, Shell: {shell}"
+    
+
 def get_parent_cli():
     ppid = os.getppid()
     try:
