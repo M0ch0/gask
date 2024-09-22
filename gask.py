@@ -155,7 +155,7 @@ def main():
     model_name = config.get("MODEL_NAME", "gemini-1.5-flash")
 
     if not api_key or api_key == "your_google_api_key_here":
-        print("Invalid API_KEY. Please set a valid API key in your configuration.")
+        print("Invalid API_KEY. Please set a valid API key in your configuration file (~/.gask.conf).")
         return
 
     if args.query:
