@@ -57,13 +57,21 @@ def load_config(config_path=None):
 
 def get_parent_cli():
     ppid = os.getppid()
-    if os.name == 'nt':  # Windows
-        result = subprocess.run(["tasklist", "/FI", f"PID eq {ppid}", "/FO", "CSV", "/NH"], 
-                                capture_output=True, text=True)
-        return result.stdout.split(',')[0].strip('"') if result.stdout else "Unknown"
-    else:  # UNIX-like systems
-        return subprocess.run(["ps", "-p", str(ppid), "-o", "comm="], 
-                              capture_output=True, text=True).stdout.strip()
+    try:
+        if os.name == 'nt':  # Windows
+            result = subprocess.run(["tasklist", "/FI", f"PID eq {ppid}", "/FO", "CSV", "/NH"], 
+                                    capture_output=True, text=True, check=True)
+            output = result.stdout.strip().strip('"')
+            if output:
+                return output.split('","')[0]
+            return "Unknown"
+        else:  # UNIX-like systems
+            result = subprocess.run(["ps", "-p", str(ppid), "-o", "comm="], 
+                                    capture_output=True, text=True, check=True)
+            return result.stdout.strip() if result.stdout else "Unknown"
+    except subprocess.CalledProcessError:
+        return "Unknown"
+
 
 def generate_commands(query, model_name, api_key):
     """
