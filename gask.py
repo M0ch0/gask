@@ -7,7 +7,9 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-import requests
+import urllib.request
+import urllib.error
+
 
 # Define the JSON schema
 COMMAND_SCHEMA = {
@@ -109,16 +111,30 @@ def generate_commands(query, model_name, api_key):
             "responseSchema": COMMAND_SCHEMA
         }
     }
+    
+    request = urllib.request.Request(f"{url}?key={api_key}", 
+                                    data=json.dumps(data).encode('utf-8'), 
+                                    headers=headers, 
+                                    method='POST')
 
     try:
-        response = requests.post(f"{url}?key={api_key}", headers=headers, json=data, timeout=600, verify=True)
-        response.raise_for_status()
-        result = response.json()
-        return result['candidates'][0]['content']['parts'][0]['text']
-    except requests.RequestException as e:
+        with urllib.request.urlopen(request, timeout=600) as response:
+            result = json.load(response)
+            return result['candidates'][0]['content']['parts'][0]['text']
+    except urllib.error.HTTPError as e:
         print("An error occurred while communicating with the API. Please try again later.")
         if os.environ.get('GASK_DEBUG'):
-            print(f"Debug info: {str(e)}")
+            print(f"HTTP Error: {e.code} - {e.reason}")
+        sys.exit(1)
+    except urllib.error.URLError as e:
+        print("Failed to reach the server. Please check your internet connection.")
+        if os.environ.get('GASK_DEBUG'):
+            print(f"URL Error: {e.reason}")
+        sys.exit(1)
+    except Exception as e:
+        print("An unexpected error occurred.")
+        if os.environ.get('GASK_DEBUG'):
+            print(f"Error: {str(e)}")
         sys.exit(1)
 
 
